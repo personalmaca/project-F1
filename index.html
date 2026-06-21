@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harshit's Pit Wall · F1 2026</title>
+<meta name="description" content="A personal F1 2026 dashboard for Harshit Raj — countdown to the next lights-out, live standings, and everything tracking the No.3 Red Bull of Max Verstappen.">
+<meta name="theme-color" content="#0A0D14">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+  /* ============ DESIGN TOKENS ============ */
+  :root{
+    --bg: #0A0D14;
+    --panel: #131826;
+    --panel-hi: #1A2133;
+    --line: #232B3D;
+    --line-soft: #1A2032;
+    --text: #ECEEF3;
+    --text-mid: #97A1B7;
+    --text-low: #545F75;
+    --gold: #FFB627;
+    --gold-dim: rgba(255,182,39,0.13);
+    --gold-line: rgba(255,182,39,0.35);
+    --blue: #4C8DFF;
+    --blue-dim: rgba(76,141,255,0.13);
+    --silver: #C7CDDB;
+    --bronze: #C98A4B;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --maxw: 1180px;
+
+    --f-display: 'Saira Condensed', sans-serif;
+    --f-body: 'Inter', sans-serif;
+    --f-mono: 'JetBrains Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior: auto; }
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body::before{
+    content:"";
+    position: fixed; inset:0;
+    background:
+      radial-gradient(680px 420px at 12% -8%, rgba(255,182,39,0.10), transparent 60%),
+      radial-gradient(720px 460px at 95% 8%, rgba(76,141,255,0.09), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  ::selection{ background: var(--gold-dim); color: var(--gold); }
+
+  a{ color: var(--blue); text-decoration: none; }
+  a:hover{ text-decoration: underline; }
+
+  :focus-visible{
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  h1,h2,h3{ margin:0; font-family: var(--f-display); font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; }
+
+  .mono{ font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ============ TOPBAR ============ */
+  .topbar{
+    position: sticky; top:0; z-index: 50;
+    backdrop-filter: blur(14px) saturate(140%);
+    background: rgba(10,13,20,0.78);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .topbar-inner{
+    max-width: var(--maxw); margin:0 auto; padding: 14px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+    position: relative; z-index: 1;
+  }
+  .brand{
+    display:flex; align-items:center; gap:9px;
+    font-family: var(--f-display); font-weight: 800; letter-spacing: 0.02em;
+    font-size: 1rem; text-transform: uppercase; color: var(--text);
+  }
+  .brand-dot{
+    width: 9px; height:9px; border-radius:50%;
+    background: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-dim);
+    flex-shrink:0;
+  }
+  .brand small{ color: var(--text-low); font-family: var(--f-body); font-weight: 600; letter-spacing: 0.06em; font-size: 0.65rem; margin-left: 2px; }
+  .clock{
+    font-family: var(--f-mono); font-size: 0.82rem; color: var(--text-mid);
+    display:flex; align-items:center; gap:8px;
+  }
+  .clock .live-pip{
+    width:6px;height:6px;border-radius:50%;background:#34D399;
+    box-shadow:0 0 0 3px rgba(52,211,153,0.18);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{ opacity:1 } 50%{ opacity:0.35 } }
+
+  /* ============ HERO ============ */
+  .hero{
+    padding: 92px 0 84px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .eyebrow{
+    display:flex; align-items:center; gap:10px;
+    font-family: var(--f-body); font-weight: 600;
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-low); margin: 0 0 18px;
+  }
+  .eyebrow-num{
+    font-family: var(--f-mono); color: var(--gold);
+    background: var(--gold-dim); border: 1px solid var(--gold-line);
+    padding: 3px 8px; border-radius: 5px; font-size: 0.68rem; letter-spacing: 0.04em;
+  }
+  .hero-greeting{
+    font-family: var(--f-mono); color: var(--text-mid);
+    font-size: 0.95rem; margin: 0 0 6px;
+  }
+  .hero h1{
+    font-size: clamp(3rem, 9vw, 6.6rem);
+    line-height: 0.93;
+    margin: 0 0 22px;
+  }
+  .hero h1 em{
+    font-style: normal; color: var(--gold);
+  }
+  .hero-sub{
+    max-width: 560px; color: var(--text-mid); font-size: 1.02rem; line-height: 1.65;
+    margin: 0 0 34px;
+  }
+  .hero-sub strong{ color: var(--text); font-weight: 600; }
+  .hero-chips{ display:flex; flex-wrap: wrap; gap: 10px; }
+  .chip{
+    display:inline-flex; align-items:center; gap:7px;
+    font-family: var(--f-mono); font-size: 0.78rem; color: var(--text-mid);
+    border: 1px solid var(--line); background: var(--panel);
+    padding: 8px 13px; border-radius: 100px;
+  }
+  .chip b{ color: var(--text); font-weight: 600; }
+  .chip .dot{ width:6px; height:6px; border-radius:50%; background: var(--gold); }
+
+  /* ============ SECTION SHELL ============ */
+  section.screen{
+    padding: 76px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .screen-head{
+    display:flex; flex-wrap:wrap; align-items: flex-end; justify-content: space-between;
+    gap: 16px; margin-bottom: 38px;
+  }
+  .screen-head h2{ font-size: clamp(1.7rem, 4vw, 2.7rem); }
+  .screen-head .meta{ color: var(--text-low); font-family: var(--f-mono); font-size: 0.78rem; }
+
+  .reveal{ opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in{ opacity: 1; transform: translateY(0); }
+
+  /* ============ UP NEXT / COUNTDOWN ============ */
+  .upnext-card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 38px clamp(20px, 4vw, 48px);
+  }
+  .upnext-top{
+    display:flex; flex-wrap:wrap; justify-content: space-between; align-items: flex-start; gap: 18px;
+    margin-bottom: 30px;
+  }
+  .upnext-title h3{ font-size: clamp(1.6rem, 4vw, 2.5rem); margin-bottom: 6px; }
+  .upnext-title p{ margin:0; color: var(--text-mid); font-size: 0.92rem; }
+  .upnext-title p .home{ color: var(--gold); font-weight: 600; }
+  .race-badge{
+    font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.06em;
+    color: var(--bg); background: var(--gold);
+    padding: 7px 13px; border-radius: 100px; font-weight: 700; white-space: nowrap;
+  }
+
+  .countdown{
+    display:flex; align-items: center; justify-content:center;
+    gap: clamp(8px, 2vw, 18px);
+    padding: 20px 0 28px;
+  }
+  .flap-group{ display:flex; flex-direction: column; align-items: center; gap: 9px; }
+  .flap-value{
+    font-family: var(--f-mono); font-weight: 700;
+    font-size: clamp(2.4rem, 8vw, 4.6rem);
+    color: var(--gold);
+    background: linear-gradient(180deg, var(--panel-hi), #10141F);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 6px clamp(10px, 2vw, 18px);
+    min-width: clamp(64px, 12vw, 110px);
+    text-align: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .flap-value.flip{ animation: flap 0.45s ease; }
+  @keyframes flap{
+    0%{ transform: rotateX(0deg); opacity:1; }
+    45%{ transform: rotateX(85deg); opacity:0.4; }
+    55%{ transform: rotateX(85deg); opacity:0.4; }
+    100%{ transform: rotateX(0deg); opacity:1; }
+  }
+  .flap-label{
+    font-family: var(--f-body); font-weight: 600; font-size: 0.66rem;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-low);
+  }
+  .flap-sep{ font-family: var(--f-mono); color: var(--text-low); font-size: clamp(1.4rem,4vw,2.4rem); margin-top: -18px; }
+
+  .upnext-facts{
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+    gap: 1px; background: var(--line);
+    border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden;
+    margin-top: 10px;
+  }
+  .fact{ background: var(--panel-hi); padding: 16px 18px; }
+  .fact-label{ font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-low); margin-bottom: 7px; }
+  .fact-value{ font-family: var(--f-mono); font-size: 1.15rem; color: var(--text); font-weight: 600; }
+  .fact-value.accent{ color: var(--gold); }
+
+  /* ============ CALENDAR STRIP ============ */
+  .cal-strip{
+    display:flex; gap: 12px; overflow-x: auto; padding: 4px 4px 16px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cal-strip::-webkit-scrollbar{ height: 6px; }
+  .cal-strip::-webkit-scrollbar-thumb{ background: var(--line); border-radius: 10px; }
+  .cal-card{
+    scroll-snap-align: start;
+    flex: 0 0 auto; width: 168px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 16px;
+    position: relative;
+  }
+  .cal-card.is-next{ border-color: var(--gold-line); background: linear-gradient(180deg, var(--gold-dim), var(--panel)); }
+  .cal-card.is-done{ opacity: 0.55; }
+  .cal-round{ font-family: var(--f-mono); font-size: 0.68rem; color: var(--text-low); margin-bottom: 10px; display:flex; justify-content: space-between; align-items:center;}
+  .cal-card.is-next .cal-round{ color: var(--gold); }
+  .cal-status{ width:7px; height:7px; border-radius: 50%; background: var(--text-low); }
+  .cal-card.is-done .cal-status{ background: #4ADE80; }
+  .cal-card.is-next .cal-status{ background: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim); }
+  .cal-gp{ font-family: var(--f-display); font-weight: 700; font-size: 1.08rem; text-transform: uppercase; line-height: 1.1; margin-bottom: 6px; }
+  .cal-circuit{ font-size: 0.74rem; color: var(--text-mid); margin-bottom: 10px; }
+  .cal-date{ font-family: var(--f-mono); font-size: 0.74rem; color: var(--text-low); }
+  .cal-sprint{
+    position:absolute; top:14px; right:14px;
+    font-size: 0.6rem; font-family: var(--f-mono); color: var(--blue);
+    background: var(--blue-dim); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.04em;
+  }
+
+  /* ============ STANDINGS ============ */
+  .standings-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap: 28px;
+  }
+  .table-card{
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .table-card-head{
+    padding: 18px 20px; border-bottom: 1px solid var(--line);
+    display:flex; justify-content: space-between; align-items:center;
+  }
+  .table-card-head h3{ font-size: 1.15rem; letter-spacing: 0.01em; }
+  .table-card-head span{ font-family: var(--f-mono); font-size: 0.7rem; color: var(--text-low); }
+  table{ width:100%; border-collapse: collapse; }
+  tbody tr{ border-bottom: 1px solid var(--line-soft); transition: background .15s ease; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background: var(--panel-hi); }
+  tbody tr.is-you{ background: var(--gold-dim); border-left: 3px solid var(--gold); }
+  tbody tr.is-you:hover{ background: var(--gold-dim); }
+  td{ padding: 12px 16px; font-size: 0.88rem; vertical-align: middle; }
+  td.pos{ font-family: var(--f-mono); color: var(--text-low); width: 30px; }
+  td.pts{ font-family: var(--f-mono); text-align: right; color: var(--text); font-weight: 600; }
+  .team-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:9px; flex-shrink:0; }
+  .driver-cell{ display:flex; align-items: center; }
+  .driver-cell .nm{ font-weight: 600; }
+  .driver-cell .tm{ color: var(--text-low); font-size: 0.76rem; margin-left: 7px; }
+  .you-tag{
+    font-family: var(--f-mono); font-size: 0.6rem; color: var(--gold);
+    border: 1px solid var(--gold-line); padding: 1px 6px; border-radius: 4px;
+    margin-left: 8px; letter-spacing: 0.04em; vertical-align: middle;
+  }
+
+  /* ============ LAST RACE ============ */
+  .lr-grid{
+    display:grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: stretch;
+  }
+  .lr-card{ background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; }
+  .lr-title{ font-size: 1.4rem; margin-bottom: 6px; }
+  .lr-note{ color: var(--text-mid); font-size: 0.88rem; margin: 0 0 24px; line-height:1.6; }
+  .podium{ display:flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
+  .podium-row{
+    display:flex; align-items:center; gap: 14px;
+    padding: 12px 14px; border-radius: 10px; background: var(--panel-hi); border: 1px solid var(--line);
+  }
+  .pos-badge{
+    font-family: var(--f-mono); font-weight: 700; font-size: 0.95rem;
+    width: 34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; color: var(--bg);
+  }
+  .pos-badge.p1{ background: var(--gold); }
+  .pos-badge.p2{ background: var(--silver); }
+  .pos-badge.p3{ background: var(--bronze); }
+  .podium-row .nm{ font-weight: 600; flex:1; }
+  .podium-row .tm{ color: var(--text-low); font-size: 0.78rem; }
+  .you-flag{
+    display:flex; align-items:center; gap: 12px; padding: 12px 14px;
+    border: 1px dashed var(--gold-line); border-radius: 10px; background: var(--gold-dim);
+    font-size: 0.85rem; color: var(--text-mid);
+  }
+  .you-flag b{ color: var(--gold); }
+
+  .conditions{ display:grid; grid-template-columns: repeat(4,1fr); gap:1px; background: var(--line); border:1px solid var(--line); border-radius: var(--radius-sm); overflow:hidden; margin-bottom: 24px; }
+  .cond{ background: var(--panel-hi); padding: 14px 10px; text-align:center; }
+  .cond-label{ font-size: 0.62rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-low); margin-bottom:6px;}
+  .cond-value{ font-family: var(--f-mono); font-size: 1.1rem; font-weight: 600; }
+
+  .tyre-list{ display:flex; flex-direction: column; gap: 8px; }
+  .tyre-row{ display:flex; align-items:center; gap: 10px; font-size: 0.82rem; }
+  .tyre-row .p{ font-family: var(--f-mono); color: var(--text-low); width: 22px; }
+  .tyre-row .nm{ flex:1; }
+  .tyre-chip{
+    font-family: var(--f-mono); font-size: 0.62rem; letter-spacing: 0.04em;
+    padding: 2px 8px; border-radius: 100px; text-transform: uppercase; font-weight: 600;
+  }
+  .tyre-chip.soft{ background: rgba(248,113,113,0.15); color: #F87171; }
+  .tyre-chip.medium{ background: rgba(250,204,21,0.15); color: #FACC15; }
+  .tyre-chip.hard{ background: rgba(255,255,255,0.1); color: #E5E7EB; }
+
+  /* ============ DRIVER SPOTLIGHT ============ */
+  .spot-card{
+    background: var(--panel); border: 1px solid var(--gold-line); border-radius: var(--radius);
+    padding: clamp(24px,4vw,40px); position: relative; overflow:hidden;
+  }
+  .spot-card::after{
+    content:""; position:absolute; top:-40%; right:-10%; width: 420px; height: 420px;
+    background: radial-gradient(circle, rgba(255,182,39,0.12), transparent 65%);
+    pointer-events:none;
+  }
+  .spot-head{ display:flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 26px; position:relative; z-index:1; }
+  .spot-head h3{ font-size: clamp(2rem,6vw,3.2rem); color: var(--gold); margin-bottom: 4px; }
+  .spot-head p{ margin:0; color: var(--text-mid); font-family: var(--f-mono); font-size: 0.85rem; }
+  .spot-number{ font-family: var(--f-display); font-weight: 800; font-size: clamp(3rem,8vw,5.5rem); color: var(--panel-hi); -webkit-text-stroke: 1.5px var(--gold-line); line-height:1; }
+
+  .tabs{ display:flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; position:relative; z-index:1; }
+  .tab{
+    font-family: var(--f-body); font-weight: 600; font-size: 0.8rem;
+    color: var(--text-mid); background: transparent; border: 1px solid var(--line);
+    padding: 9px 16px; border-radius: 100px; cursor: pointer;
+    transition: all .15s ease;
+  }
+  .tab:hover{ border-color: var(--gold-line); color: var(--text); }
+  .tab.active{ background: var(--gold); color: var(--bg); border-color: var(--gold); }
+
+  .stat-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 1px; background: var(--line); border:1px solid var(--line); border-radius: var(--radius-sm); overflow:hidden; position:relative; z-index:1; }
+  .tab-panel.hidden{ display:none; }
+  .stat{ background: var(--panel-hi); padding: 18px 16px; }
+  .stat-num{ font-family: var(--f-mono); font-size: clamp(1.5rem,4vw,2.1rem); font-weight: 700; color: var(--text); }
+  .stat-label{ font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-low); margin-top: 6px; }
+  .stat-foot{ margin-top: 18px; color: var(--text-mid); font-size: 0.84rem; position:relative; z-index:1; line-height:1.6; }
+  .stat-foot b{ color: var(--gold); }
+
+  /* ============ QUALI RECAP ============ */
+  .quali-card{
+    background: var(--panel); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 30px clamp(20px,4vw,40px);
+    display:flex; flex-wrap:wrap; gap: 28px; align-items:center; justify-content: space-between;
+  }
+  .quali-pole{ display:flex; align-items:center; gap: 16px; }
+  .quali-pole .pos-badge{ width:46px; height:46px; font-size:1.1rem; }
+  .quali-pole h4{ font-family: var(--f-display); font-size: 1.5rem; margin: 0 0 3px; text-transform:uppercase; }
+  .quali-pole p{ margin:0; color: var(--text-mid); font-size: 0.84rem; }
+  .quali-stat{ text-align: right; }
+  .quali-stat .n{ font-family: var(--f-mono); font-size: 2.2rem; font-weight: 700; color: var(--blue); line-height:1; }
+  .quali-stat .l{ font-size: 0.72rem; color: var(--text-low); margin-top: 6px; letter-spacing:0.04em; text-transform:uppercase; }
+
+  /* ============ FOOTER ============ */
+  footer{ padding: 60px 0 50px; }
+  .foot-top{ display:flex; flex-wrap:wrap; justify-content: space-between; gap: 20px; align-items:flex-start; margin-bottom: 28px; }
+  .foot-brand{ font-family: var(--f-display); font-weight: 800; font-size: 1.4rem; text-transform: uppercase; }
+  .foot-brand span{ color: var(--gold); }
+  .foot-note{ max-width: 420px; color: var(--text-mid); font-size: 0.88rem; line-height: 1.6; }
+  .foot-note b{ color: var(--text); }
+  .foot-meta{ font-family: var(--f-mono); font-size: 0.74rem; color: var(--text-low); text-align: right; }
+  .foot-bottom{ padding-top: 24px; border-top: 1px solid var(--line-soft); color: var(--text-low); font-size: 0.76rem; line-height: 1.6; }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 880px){
+    .standings-grid, .lr-grid{ grid-template-columns: 1fr; }
+    .conditions{ grid-template-columns: repeat(2,1fr); }
+    .foot-top{ flex-direction: column; }
+    .foot-meta{ text-align:left; }
+  }
+  @media (max-width: 540px){
+    .hero{ padding: 70px 0 60px; }
+    section.screen{ padding: 56px 0; }
+    .flap-sep{ display:none; }
+    .countdown{ gap: 8px; flex-wrap: wrap; }
+    .spot-number{ display:none; }
+    .quali-card{ flex-direction: column; align-items: flex-start; }
+    .quali-stat{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="brand-dot"></span>Pit Wall<small>F1 2026</small></div>
+      <div class="clock"><span class="live-pip"></span><span id="liveClock" class="mono">--:--:--</span></div>
+    </div>
+  </div>
+
+  <main class="wrap">
+
+    <!-- HERO -->
+    <section class="hero">
+      <p class="eyebrow"><span class="eyebrow-num">LIVE</span>F1 2026 · Round 8 next</p>
+      <p class="hero-greeting" id="greeting">good evening, harshit</p>
+      <h1>Your pit wall.<br>Built on <em>No. 3</em>.</h1>
+      <p class="hero-sub">Every screen on this wall is tuned to one car — <strong>Max Verstappen's Red Bull</strong>. The next lights-out, where the championship stands, and how Spielberg has treated him before.</p>
+      <div class="hero-chips">
+        <span class="chip"><span class="dot"></span>Driver — <b>Max Verstappen</b></span>
+        <span class="chip">Team — <b>Red Bull Racing</b></span>
+        <span class="chip">Standing — <b>P7 · 55 pts</b></span>
+      </div>
+    </section>
+
+    <!-- UP NEXT -->
+    <section class="screen reveal" id="upnext">
+      <div class="screen-head">
+        <h2>Up Next</h2>
+        <span class="meta">Round 08 of 22</span>
+      </div>
+      <div class="upnext-card">
+        <div class="upnext-top">
+          <div class="upnext-title">
+            <h3>Austrian Grand Prix</h3>
+            <p>Red Bull Ring, Spielberg — <span class="home">Red Bull's home race</span></p>
+          </div>
+          <span class="race-badge">Sun 28 Jun · 15:00 CEST</span>
+        </div>
+
+        <div class="countdown" id="countdown" role="timer" aria-label="Countdown to lights out at the Austrian Grand Prix">
+          <div class="flap-group"><span class="flap-value mono" id="cd-d">00</span><span class="flap-label">Days</span></div>
+          <span class="flap-sep">:</span>
+          <div class="flap-group"><span class="flap-value mono" id="cd-h">00</span><span class="flap-label">Hrs</span></div>
+          <span class="flap-sep">:</span>
+          <div class="flap-group"><span class="flap-value mono" id="cd-m">00</span><span class="flap-label">Min</span></div>
+          <span class="flap-sep">:</span>
+          <div class="flap-group"><span class="flap-value mono" id="cd-s">00</span><span class="flap-label">Sec</span></div>
+        </div>
+
+        <div class="upnext-facts">
+          <div class="fact"><div class="fact-label">Your local start</div><div class="fact-value" id="localStart">—</div></div>
+          <div class="fact"><div class="fact-label">Lap record</div><div class="fact-value">1:05.619 · Sainz</div></div>
+          <div class="fact"><div class="fact-label">2025 pole</div><div class="fact-value">L. Norris</div></div>
+          <div class="fact"><div class="fact-label">Verstappen here</div><div class="fact-value accent">4 wins · most ever</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="screen reveal" id="calendar">
+      <div class="screen-head">
+        <h2>Season Calendar</h2>
+        <span class="meta">22 rounds · 2026</span>
+      </div>
+      <div class="cal-strip" id="calStrip"></div>
+    </section>
+
+    <!-- STANDINGS -->
+    <section class="screen reveal" id="standings">
+      <div class="screen-head">
+        <h2>Championship</h2>
+        <span class="meta">After Round 7 · Barcelona-Catalunya GP</span>
+      </div>
+      <div class="standings-grid">
+        <div class="table-card">
+          <div class="table-card-head"><h3>Drivers</h3><span>Top 10</span></div>
+          <table><tbody id="driverTable"></tbody></table>
+        </div>
+        <div class="table-card">
+          <div class="table-card-head"><h3>Constructors</h3><span>All 11</span></div>
+          <table><tbody id="teamTable"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAST RACE -->
+    <section class="screen reveal" id="lastrace">
+      <div class="screen-head">
+        <h2>Last Race</h2>
+        <span class="meta">Barcelona-Catalunya · 14 Jun</span>
+      </div>
+      <div class="lr-grid">
+        <div class="lr-card">
+          <h3 class="lr-title">Hamilton breaks the streak</h3>
+          <p class="lr-note">A maiden Ferrari win for the seven-time champion, with a virtual safety car and a three-stop gamble doing the damage. Antonelli's title lead was cut to 41 points after a late retirement handed Mercedes a tense afternoon.</p>
+          <div class="podium">
+            <div class="podium-row"><span class="pos-badge p1">1</span><span class="nm">Lewis Hamilton</span><span class="tm">Ferrari</span></div>
+            <div class="podium-row"><span class="pos-badge p2">2</span><span class="nm">George Russell</span><span class="tm">Mercedes</span></div>
+            <div class="podium-row"><span class="pos-badge p3">3</span><span class="nm">Lando Norris</span><span class="tm">McLaren</span></div>
+          </div>
+          <div class="you-flag">⟶ <b>P4 — Max Verstappen.</b> His best finish of the 2026 season, up one from a P5 grid slot.</div>
+        </div>
+        <div class="lr-card">
+          <h3 class="lr-title">Conditions &amp; strategy</h3>
+          <p class="lr-note">Track temps cleared 50°C before the formation lap — a scorcher that punished anyone who got tyre management wrong.</p>
+          <div class="conditions">
+            <div class="cond"><div class="cond-label">Air</div><div class="cond-value">30°C</div></div>
+            <div class="cond"><div class="cond-label">Track</div><div class="cond-value">52°C</div></div>
+            <div class="cond"><div class="cond-label">Humidity</div><div class="cond-value">47%</div></div>
+            <div class="cond"><div class="cond-label">Rain</div><div class="cond-value">0%</div></div>
+          </div>
+          <div class="tyre-list" id="tyreList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DRIVER SPOTLIGHT -->
+    <section class="screen reveal" id="driver">
+      <div class="screen-head">
+        <h2>Your Driver</h2>
+        <span class="meta">Updated through Round 7</span>
+      </div>
+      <div class="spot-card">
+        <div class="spot-head">
+          <div>
+            <h3>Max Verstappen</h3>
+            <p>Red Bull Racing · Red Bull-Ford · Car No. 3</p>
+          </div>
+          <div class="spot-number">VER</div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Verstappen stat views">
+          <button class="tab active" role="tab" aria-selected="true" data-panel="career">Career</button>
+          <button class="tab" role="tab" aria-selected="false" data-panel="season">2026 Season</button>
+          <button class="tab" role="tab" aria-selected="false" data-panel="track">At Spielberg</button>
+        </div>
+
+        <div class="tab-panel" id="panel-career" data-panel="career">
+          <div class="stat-grid">
+            <div class="stat"><div class="stat-num">71</div><div class="stat-label">Race wins</div></div>
+            <div class="stat"><div class="stat-num">48</div><div class="stat-label">Pole positions</div></div>
+            <div class="stat"><div class="stat-num">128</div><div class="stat-label">Podiums</div></div>
+            <div class="stat"><div class="stat-num">37</div><div class="stat-label">Fastest laps</div></div>
+            <div class="stat"><div class="stat-num">4</div><div class="stat-label">World titles</div></div>
+          </div>
+          <p class="stat-foot">Four straight championships, <b>2021–2024</b>. Debuted in 2015 with Toro Rosso at 17 — still F1's youngest-ever starter.</p>
+        </div>
+
+        <div class="tab-panel hidden" id="panel-season" data-panel="season">
+          <div class="stat-grid">
+            <div class="stat"><div class="stat-num">P7</div><div class="stat-label">Championship</div></div>
+            <div class="stat"><div class="stat-num">55</div><div class="stat-label">Points</div></div>
+            <div class="stat"><div class="stat-num">P3</div><div class="stat-label">Best finish · Canada</div></div>
+            <div class="stat"><div class="stat-num">0</div><div class="stat-label">Wins so far</div></div>
+          </div>
+          <p class="stat-foot">A rebuilding year — new <b>Red Bull-Ford</b> power unit, new regulations. Recent form: Canada P3 → Monaco DNF → Barcelona P4, trending the right way.</p>
+        </div>
+
+        <div class="tab-panel hidden" id="panel-track" data-panel="track">
+          <div class="stat-grid">
+            <div class="stat"><div class="stat-num">4</div><div class="stat-label">Wins here</div></div>
+            <div class="stat"><div class="stat-num">4</div><div class="stat-label">Poles here</div></div>
+            <div class="stat"><div class="stat-num">'18</div><div class="stat-label">First win</div></div>
+            <div class="stat"><div class="stat-num">'23</div><div class="stat-label">Last win</div></div>
+          </div>
+          <p class="stat-foot">More wins at the <b>Red Bull Ring</b> than any other driver on the current grid (2018, 2019, 2021, 2023) — on his own team's home tarmac.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUALI RECAP -->
+    <section class="screen reveal" id="quali" style="border-bottom:none;">
+      <div class="screen-head">
+        <h2>Qualifying Recap</h2>
+        <span class="meta">Barcelona-Catalunya · 13 Jun</span>
+      </div>
+      <div class="quali-card">
+        <div class="quali-pole">
+          <span class="pos-badge p1">P</span>
+          <div>
+            <h4>George Russell</h4>
+            <p>Pole position — his third of the season, Mercedes</p>
+          </div>
+        </div>
+        <div class="quali-stat">
+          <div class="n">7</div>
+          <div class="l">Straight poles for Mercedes</div>
+        </div>
+        <div class="quali-stat">
+          <div class="n">P5</div>
+          <div class="l">Verstappen's grid slot</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-top">
+        <div>
+          <div class="foot-brand">Pit Wall <span>· F1 2026</span></div>
+          <p class="foot-note">Built for <b>Harshit Raj</b>. One driver, one team, every screen on the wall pointed at the No. 3 Red Bull.</p>
+        </div>
+        <div class="foot-meta">Data current through<br>Round 7 · Barcelona-Catalunya GP<br>14 June 2026</div>
+      </div>
+      <div class="foot-bottom">
+        Unofficial fan project. Not affiliated with, endorsed by, or associated with Formula 1, the FIA, FOM, or any team. Driver and team names used for identification only.
+      </div>
+    </div>
+  </footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- live clock ---------- */
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function updateClock(){
+    var d = new Date();
+    document.getElementById('liveClock').textContent =
+      pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  /* ---------- greeting ---------- */
+  (function(){
+    var h = new Date().getHours();
+    var g = 'good evening, harshit';
+    if(h < 5) g = 'still up, harshit?';
+    else if(h < 12) g = 'good morning, harshit';
+    else if(h < 17) g = 'good afternoon, harshit';
+    else if(h < 21) g = 'good evening, harshit';
+    else g = 'good night, harshit';
+    document.getElementById('greeting').textContent = g;
+  })();
+
+  /* ---------- countdown ---------- */
+  var target = new Date('2026-06-28T15:00:00+02:00').getTime();
+
+  function setFlap(id, val){
+    var el = document.getElementById(id);
+    if(el.textContent !== val){
+      el.textContent = val;
+      if(!reduceMotion){
+        el.classList.remove('flip');
+        void el.offsetWidth;
+        el.classList.add('flip');
+      }
+    }
+  }
+
+  function tickCountdown(){
+    var now = Date.now();
+    var diff = Math.max(0, target - now);
+    var d = Math.floor(diff / 86400000);
+    var h = Math.floor((diff % 86400000) / 3600000);
+    var m = Math.floor((diff % 3600000) / 60000);
+    var s = Math.floor((diff % 60000) / 1000);
+    setFlap('cd-d', pad(d));
+    setFlap('cd-h', pad(h));
+    setFlap('cd-m', pad(m));
+    setFlap('cd-s', pad(s));
+  }
+  tickCountdown();
+  setInterval(tickCountdown, 1000);
+
+  /* local start time conversion */
+  (function(){
+    try{
+      var dt = new Date(target);
+      var str = dt.toLocaleString(undefined, {
+        weekday: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+      });
+      document.getElementById('localStart').textContent = str;
+    }catch(e){
+      document.getElementById('localStart').textContent = 'Sun · 15:00 CEST';
+    }
+  })();
+
+  /* ---------- season calendar ---------- */
+  var rounds = [
+    {n:1,  gp:'Australia',     circ:'Melbourne',        date:'Mar 6–8',    status:'done'},
+    {n:2,  gp:'China',         circ:'Shanghai',         date:'Mar 13–15',  status:'done', sprint:true},
+    {n:3,  gp:'Japan',         circ:'Suzuka',           date:'Mar 27–29',  status:'done'},
+    {n:4,  gp:'Miami',         circ:'Miami Gardens',    date:'May 1–3',    status:'done', sprint:true},
+    {n:5,  gp:'Canada',        circ:'Montreal',         date:'May 22–24',  status:'done', sprint:true},
+    {n:6,  gp:'Monaco',        circ:'Monte Carlo',      date:'Jun 5–7',    status:'done'},
+    {n:7,  gp:'Spain',         circ:'Barcelona-Catalunya', date:'Jun 12–14', status:'done'},
+    {n:8,  gp:'Austria',       circ:'Red Bull Ring',    date:'Jun 26–28',  status:'next'},
+    {n:9,  gp:'Great Britain', circ:'Silverstone',      date:'Jul 3–5',    status:'upcoming', sprint:true},
+    {n:10, gp:'Belgium',       circ:'Spa-Francorchamps',date:'Jul 17–19',  status:'upcoming'},
+    {n:11, gp:'Hungary',       circ:'Hungaroring',      date:'Jul 24–26',  status:'upcoming'},
+    {n:12, gp:'Netherlands',   circ:'Zandvoort',        date:'Aug 21–23',  status:'upcoming', sprint:true},
+    {n:13, gp:'Italy',         circ:'Monza',            date:'Sep 4–6',    status:'upcoming'},
+    {n:14, gp:'Spain · Madrid',circ:'Madring',          date:'Sep 11–13',  status:'upcoming'},
+    {n:15, gp:'Azerbaijan',    circ:'Baku',             date:'Sep 24–26',  status:'upcoming'},
+    {n:16, gp:'Singapore',     circ:'Marina Bay',       date:'Oct 9–11',   status:'upcoming', sprint:true},
+    {n:17, gp:'United States', circ:'Austin',           date:'Oct 23–25',  status:'upcoming'},
+    {n:18, gp:'Mexico',        circ:'Mexico City',      date:'Oct 30–Nov 1', status:'upcoming'},
+    {n:19, gp:'Brazil',        circ:'São Paulo',        date:'Nov 6–8',    status:'upcoming'},
+    {n:20, gp:'Las Vegas',     circ:'Las Vegas',        date:'Nov 19–21',  status:'upcoming'},
+    {n:21, gp:'Qatar',         circ:'Lusail',           date:'Nov 27–29',  status:'upcoming'},
+    {n:22, gp:'Abu Dhabi',     circ:'Yas Marina',       date:'Dec 4–6',    status:'upcoming'}
+  ];
+
+  var calHtml = rounds.map(function(r){
+    var cls = 'cal-card' + (r.status === 'next' ? ' is-next' : '') + (r.status === 'done' ? ' is-done' : '');
+    return '<div class="' + cls + '">' +
+      (r.sprint ? '<span class="cal-sprint">SPRINT</span>' : '') +
+      '<div class="cal-round"><span>RD ' + pad(r.n) + '</span><span class="cal-status"></span></div>' +
+      '<div class="cal-gp">' + r.gp + '</div>' +
+      '<div class="cal-circuit">' + r.circ + '</div>' +
+      '<div class="cal-date mono">' + r.date + '</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('calStrip').innerHTML = calHtml;
+
+  /* scroll calendar to "next" round on load */
+  (function(){
+    var strip = document.getElementById('calStrip');
+    var nextCard = strip.querySelector('.is-next');
+    if(nextCard){
+      var left = nextCard.offsetLeft - 24;
+      strip.scrollLeft = Math.max(0, left);
+    }
+  })();
+
+  /* ---------- LIVE STANDINGS API INTEGRATION ---------- */
+  var teamColors = {
+    'Mercedes': '#00D7B6', 'Ferrari': '#E8002D', 'McLaren': '#FF8700',
+    'Red Bull Racing': '#3671C6', 'Red Bull': '#3671C6', 'Alpine': '#2293D1', 
+    'Racing Bulls': '#6C98FF', 'RB': '#6C98FF', 'Haas F1 Team': '#B6BABD', 
+    'Haas': '#B6BABD', 'Williams': '#00A0DE', 'Audi': '#A6192E',
+    'Aston Martin': '#00665E', 'Cadillac': '#9C7A3C', 'Kick Sauber': '#52E252'
+  };
+
+  async function fetchLiveF1Standings() {
+    try {
+      // Fetch Drivers
+      const drvRes = await fetch('https://api.jolpi.ca/ergast/f1/current/driverStandings.json');
+      const drvData = await drvRes.json();
+      const apiDrivers = drvData.MRData.StandingsTable.StandingsLists[0].DriverStandings;
+
+      // Fetch Constructors
+      const conRes = await fetch('https://api.jolpi.ca/ergast/f1/current/constructorStandings.json');
+      const conData = await conRes.json();
+      const apiTeams = conData.MRData.StandingsTable.StandingsLists[0].ConstructorStandings;
+
+      // Build Driver DOM (Top 10)
+      const liveDriversHtml = apiDrivers.slice(0, 10).map(d => {
+        const isYou = d.Driver.code === 'VER'; // Targets Max Verstappen
+        const teamName = d.Constructors[0].name;
+        const color = teamColors[teamName] || '#FFFFFF';
+
+        return '<tr class="' + (isYou ? 'is-you' : '') + '">' +
+          '<td class="pos mono">' + d.position + '</td>' +
+          '<td><div class="driver-cell"><span class="team-dot" style="background:' + color + '"></span>' +
+            '<span class="nm">' + d.Driver.givenName + ' ' + d.Driver.familyName + '</span><span class="tm">' + teamName + '</span>' +
+            (isYou ? '<span class="you-tag">YOU</span>' : '') +
+          '</div></td>' +
+          '<td class="pts mono">' + d.points + '</td>' +
+        '</tr>';
+      }).join('');
+      document.getElementById('driverTable').innerHTML = liveDriversHtml;
+
+      // Build Constructors DOM
+      const liveTeamsHtml = apiTeams.map(t => {
+        const isYourTeam = t.Constructor.constructorId === 'red_bull';
+        const teamName = t.Constructor.name;
+        const color = teamColors[teamName] || '#FFFFFF';
+
+        return '<tr class="' + (isYourTeam ? 'is-you' : '') + '">' +
+          '<td class="pos mono">' + t.position + '</td>' +
+          '<td><div class="driver-cell"><span class="team-dot" style="background:' + color + '"></span>' +
+            '<span class="nm">' + teamName + '</span>' +
+            (isYourTeam ? '<span class="you-tag">YOUR TEAM</span>' : '') +
+          '</div></td>' +
+          '<td class="pts mono">' + t.points + '</td>' +
+        '</tr>';
+      }).join('');
+      document.getElementById('teamTable').innerHTML = liveTeamsHtml;
+
+    } catch (error) {
+      console.error("Failed to fetch live API data:", error);
+      // Fallback could be placed here if the API goes down
+    }
+  }
+
+  // Fetch immediately on load, then set an interval for every 10 minutes (600,000 ms)
+  fetchLiveF1Standings();
+  setInterval(fetchLiveF1Standings, 600000);
+
+  /* ---------- tyre strip ---------- */
+  var finishers = [
+    {p:1, nm:'Lewis Hamilton', tyre:'soft'},
+    {p:2, nm:'George Russell', tyre:'medium'},
+    {p:3, nm:'Lando Norris',   tyre:'medium'},
+    {p:4, nm:'Max Verstappen', tyre:'soft'},
+    {p:5, nm:'Oscar Piastri',  tyre:'medium'}
+  ];
+  document.getElementById('tyreList').innerHTML = finishers.map(function(f){
+    return '<div class="tyre-row">' +
+      '<span class="p mono">P' + f.p + '</span>' +
+      '<span class="nm">' + f.nm + '</span>' +
+      '<span class="tyre-chip ' + f.tyre + '">' + f.tyre + '</span>' +
+    '</div>';
+  }).join('');
+
+  /* ---------- driver tabs ---------- */
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var target = tab.getAttribute('data-panel');
+      tabs.forEach(function(t){
+        t.classList.toggle('active', t === tab);
+        t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+      });
+      document.querySelectorAll('.tab-panel').forEach(function(p){
+        p.classList.toggle('hidden', p.getAttribute('data-panel') !== target);
+      });
+    });
+  });
+
+  /* ---------- scroll reveal ---------- */
+  if('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {threshold: 0.12});
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+  } else {
+    document.querySelectorAll('.reveal').forEach(function(el){ el.classList.add('in'); });
+  }
+
+})();
+</script>
+</body>
+</html>
